@@ -3,10 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title></title>
+    <script type="text/javascript">
+        function clearLocalAntsData() {
+            localStorage.removeItem('ants.map.mapData');
+            localStorage.removeItem('ants.map.hives');
+        }
+        function clearLocalAntsHives() {
+            localStorage.removeItem('ants.map.hives');
+        }
+    </script>
 </head>
 <body>
 <canvas id="canvas" width="2000px" height="540px" style="background: #fff; margin:20px;"></canvas>
-<button onclick="localStorage.removeItem('cachedMap');window.location.reload()">Reset map</button>
+<button onclick="clearLocalAntsData();window.location.reload()">Reset all</button>
+<button onclick="clearLocalAntsHives();window.location.reload()">Reset hives</button>
+<script type="text/javascript" src="grid.js"></script>
 <script type="text/javascript" src="map.js"></script>
 <script type="text/javascript" src="app.js"></script>
 </body>
