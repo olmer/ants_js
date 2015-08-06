@@ -1,10 +1,10 @@
-
 var Entity = function (data) {
     this.color = data.color || '#000';
 };
 
 var Map = function (numberOfPlayers) {
     numberOfPlayers = numberOfPlayers || 0;
+    this.numberOfPlayers = numberOfPlayers;
 
     var ids = {
             nothing: 0,
@@ -138,17 +138,24 @@ var Map = function (numberOfPlayers) {
 
     var addHives = function (qty) {
         var x, y, cellEmpty;
+        var cachedHives = getLocalData('hives');
+        cachedHives = cachedHives || [];
         for (var i = 0; i < qty; i++) {
             cellEmpty = false;
+            cachedHives[i] = cachedHives[i] || {};
             while (!cellEmpty) {
-                x = Math.floor(Math.random() * mapWidth);
-                y = Math.floor(Math.random() * mapHeight);
+                x = cachedHives[i]['x'] || Math.floor(Math.random() * mapWidth);
+                y = cachedHives[i]['y'] || Math.floor(Math.random() * mapHeight);
                 if (getCell(x, y) === ids.nothing) {
                     cellEmpty = true;
                     setCell(ids.hive, x, y);
+                    cachedHives[i]['x'] = x;
+                    cachedHives[i]['y'] = y;
                 }
             }
         }
+
+        storeLocalData('hives', cachedHives);
     };
 
     initEmptyMap();
