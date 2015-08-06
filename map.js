@@ -1,10 +1,62 @@
-var Entity = function (data) {
-    this.color = data.color || '#000';
-};
-
 var Map = function (numberOfPlayers) {
-    numberOfPlayers = numberOfPlayers || 0;
-    this.numberOfPlayers = numberOfPlayers;
+
+    var idCounter = 1;
+    var entitiesPool = {};
+    var Entity = function (data) {
+        data = data || {};
+        this.id = idCounter++;
+        entitiesPool[this.id] = this;
+    };
+
+    var Hive = function (data) {
+        Entity.call(this, data);
+
+        this.type = ids.hive;
+
+        data = data || {};
+
+        this.x = data.x;
+        this.y = data.y;
+        this.playerId = data.playerId;
+    };
+    Hive.prototype = Object.create(Entity.prototype);
+    Hive.prototype.constructor = Hive;
+
+    var Water = function (data) {
+        Entity.call(this, data);
+        this.type = ids.water;
+    };
+    Water.prototype = Object.create(Entity.prototype);
+    Water.prototype.constructor = Water;
+
+    var Ant = function (data) {
+        Entity.call(this, data);
+        this.type = ids.ant;
+    };
+    Ant.prototype = Object.create(Entity.prototype);
+    Ant.prototype.constructor = Ant;
+
+    var Food = function (data) {
+        Entity.call(this, data);
+        this.type = ids.food;
+    };
+    Food.prototype = Object.create(Entity.prototype);
+    Food.prototype.constructor = Food;
+
+    var Nothing = function (data) {
+        Entity.call(this, data);
+        this.type = ids.nothing;
+    };
+    Nothing.prototype = Object.create(Entity.prototype);
+    Nothing.prototype.constructor = Nothing;
+
+    var Player = function (id) {
+        this.id = id;
+        this.hive = null;
+        this.ants = {};
+    };
+
+    this.numberOfPlayers = numberOfPlayers || 0;
 
     var ids = {
             nothing: 0,
@@ -13,12 +65,12 @@ var Map = function (numberOfPlayers) {
             food: 3,
             hive: 4
         },
-        entity = {
-            [ids.nothing]: new Entity({color: '#FFF'}),
-            [ids.ant]: new Entity({color: '#00FF9A'}),
-            [ids.water]: new Entity({color: '#0AF'}),
-            [ids.food]: new Entity({color: '#FFF900'}),
-            [ids.hive]: new Entity({color: '#714F54'})
+        entityData = {
+            [ids.nothing]: {color: '#FFF'},
+            [ids.ant]: {color: '#00FF9A'},
+            [ids.water]: {color: '#0AF'},
+            [ids.food]: {color: '#FFF900'},
+            [ids.hive]: {color: '#714F54'}
         },
         mapData = [],
         generationInput = {
@@ -29,8 +81,35 @@ var Map = function (numberOfPlayers) {
             fillEmptySpaceIterationLimit: 2
         },
         mapHeight = 100,
-        mapWidth = 200
+        mapWidth = 200,
+        players = {}
         ;
+
+    var generatePlayers = function () {
+        for (var id = 1; id <= numberOfPlayers; id++) {
+            players[id] = new Player(id);
+        }
+    };
+
+    /**
+     *
+     * @param player Player
+     * @param hive
+     */
+    var addHiveToPlayer = function (player, hive) {
+        player.hive = hive;
+    };
+
+    this.renderMapFromData = function () {
+        for (var y = 0; y < mapHeight; y++) {
+            for (var x = 0; x < mapWidth; x++) {
+                grid.drawCell(x, y, entityData[getCell(x, y)].color);
+            }
+        }
+    };
+    this.turnIteration = function () {
+        console.log('create food');
+    };
 
     var storeLocalData = function (key, data) {
         localStorage.setItem('ants.map.' + key, JSON.stringify(data));
@@ -47,7 +126,7 @@ var Map = function (numberOfPlayers) {
     };
     var setCell = function (entityId, x, y) {
         entityId = parseInt(entityId, 10);
-        if (typeof entity[entityId] === 'undefined') {
+        if (typeof entityData[entityId] === 'undefined') {
             throw new Error('Invalid entity type: ' + entityId);
         }
         if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
@@ -128,40 +207,53 @@ var Map = function (numberOfPlayers) {
         storeLocalData('mapData', mapData);
     };
 
-    var renderMapFromData = function () {
-        for (var y = 0; y < mapHeight; y++) {
-            for (var x = 0; x < mapWidth; x++) {
-                grid.drawCell(x, y, entity[getCell(x, y)].color);
-            }
-        }
-    };
-
-    var addHives = function (qty) {
+    var spawnHives = function (players) {
         var x, y, cellEmpty;
         var cachedHives = getLocalData('hives');
         cachedHives = cachedHives || [];
-        for (var i = 0; i < qty; i++) {
+
+        for (var playerId in players) {
+            if (!players.hasOwnProperty(playerId)) {
+                continue;
+            }
             cellEmpty = false;
-            cachedHives[i] = cachedHives[i] || {};
+            cachedHives[playerId] = cachedHives[playerId] || {};
             while (!cellEmpty) {
-                x = cachedHives[i]['x'] || Math.floor(Math.random() * mapWidth);
-                y = cachedHives[i]['y'] || Math.floor(Math.random() * mapHeight);
+                x = cachedHives[playerId]['x'] || Math.floor(Math.random() * mapWidth);
+                y = cachedHives[playerId]['y'] || Math.floor(Math.random() * mapHeight);
                 if (getCell(x, y) === ids.nothing) {
                     cellEmpty = true;
+
                     setCell(ids.hive, x, y);
-                    cachedHives[i]['x'] = x;
-                    cachedHives[i]['y'] = y;
+
+                    cachedHives[playerId]['x'] = x;
+                    cachedHives[playerId]['y'] = y;
                 }
             }
+
+            debugger;
+            addHiveToPlayer(players[playerId], new Hive({
+                playerId: playerId,
+                x: x,
+                y: y
+            }));
+            spawnAnt(players[playerId]);
         }
+
+        console.log(players);
 
         storeLocalData('hives', cachedHives);
     };
 
+    var spawnAnt = function (player) {
+        debugger;
+    };
+
+    generatePlayers();
     initEmptyMap();
     generateWater();
-    addHives(numberOfPlayers);
+    spawnHives(players);
 
     grid.drawBoard();
-    renderMapFromData();
+    this.renderMapFromData();
 };
