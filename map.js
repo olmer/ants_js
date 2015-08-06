@@ -72,7 +72,18 @@ var Map = function (numberOfPlayers) {
             [ids.food]: {color: '#FFF900'},
             [ids.hive]: {color: '#714F54'}
         },
-        mapData = [],
+        layers = {
+            base: 0,
+            fringe: 1,
+            object: 2,
+            top: 3
+        },
+        mapData = {
+            [layers.base]: [],
+            [layers.fringe]: [],
+            [layers.object]: [],
+            [layers.top]: []
+        },
         generationInput = {
             probabilityOfWater: 0.27,
             emptyCellCount: 5,
@@ -118,27 +129,40 @@ var Map = function (numberOfPlayers) {
         return JSON.parse(localStorage.getItem('ants.map.' + key));
     };
 
-    var getCell = function (x, y) {
+    var getCell = function (x, y, layer) {
+        layer = layer || layers.base;
+        if (typeof mapData[layer] === 'undefined') {
+            throw new Error('Invalid layer: ' + layer);
+        }
         if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
             throw new Error('Invalid cell: ' + x + ':' + y);
         }
-        return mapData[y][x];
+        if (typeof mapData[layer][y] === 'undefined') {
+            mapData[layer][y] = [];
+        }
+        return mapData[layer][y][x];
     };
-    var setCell = function (entityId, x, y) {
+    var setCell = function (entityId, x, y, layer) {
+        layer = layer || layers.base;
         entityId = parseInt(entityId, 10);
+        if (typeof mapData[layer] === 'undefined') {
+            throw new Error('Invalid layer: ' + layer);
+        }
         if (typeof entityData[entityId] === 'undefined') {
             throw new Error('Invalid entity type: ' + entityId);
         }
+        if (typeof mapData[layer][y] === 'undefined') {
+            mapData[layer][y] = [];
+        }
         if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
             throw new Error('Invalid cell: ' + x + ':' + y);
         }
-        mapData[y][x] = entityId;
+        mapData[layer][y][x] = entityId;
     };
 
     var grid = new Grid(mapHeight, mapWidth);
     var initEmptyMap = function () {
         for (var y = 0; y < mapHeight; y++) {
-            mapData[y] = [];
             for (var x = 0; x < mapWidth; x++) {
                 setCell(ids.nothing, x, y);
             }
