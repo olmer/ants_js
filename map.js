@@ -11,41 +11,46 @@ var Map = function (numberOfPlayers) {
     var Hive = function (data) {
         Entity.call(this, data);
 
-        this.type = ids.hive;
-
         data = data || {};
 
+        this.type = entitiesIds.hive;
         this.x = data.x;
         this.y = data.y;
-        this.playerId = data.playerId;
+        this.ownerId = data.playerId;
     };
     Hive.prototype = Object.create(Entity.prototype);
     Hive.prototype.constructor = Hive;
 
     var Water = function (data) {
         Entity.call(this, data);
-        this.type = ids.water;
+        this.type = entitiesIds.water;
     };
     Water.prototype = Object.create(Entity.prototype);
     Water.prototype.constructor = Water;
 
     var Ant = function (data) {
         Entity.call(this, data);
-        this.type = ids.ant;
+
+        data = data || {};
+
+        this.type = entitiesIds.ant;
+        this.x = data.x;
+        this.y = data.y;
+        this.ownerId = data.playerId;
     };
     Ant.prototype = Object.create(Entity.prototype);
     Ant.prototype.constructor = Ant;
 
     var Food = function (data) {
         Entity.call(this, data);
-        this.type = ids.food;
+        this.type = entitiesIds.food;
     };
     Food.prototype = Object.create(Entity.prototype);
     Food.prototype.constructor = Food;
 
     var Nothing = function (data) {
         Entity.call(this, data);
-        this.type = ids.nothing;
+        this.type = entitiesIds.nothing;
     };
     Nothing.prototype = Object.create(Entity.prototype);
     Nothing.prototype.constructor = Nothing;
@@ -59,7 +64,7 @@ var Map = function (numberOfPlayers) {
 
     this.numberOfPlayers = numberOfPlayers || 0;
 
-    var ids = {
+    var entitiesIds = {
             nothing: 0,
             ant: 1,
             water: 2,
@@ -67,11 +72,11 @@ var Map = function (numberOfPlayers) {
             hive: 4
         },
         entityData = {
-            [ids.nothing]: {color: '#FFF'},
-            [ids.ant]: {color: '#00FF9A'},
-            [ids.water]: {color: '#0AF'},
-            [ids.food]: {color: '#FFF900'},
-            [ids.hive]: {color: '#714F54'}
+            [entitiesIds.nothing]: {color: '#FFF'},
+            [entitiesIds.ant]: {color: '#00FF9A'},
+            [entitiesIds.water]: {color: '#0AF'},
+            [entitiesIds.food]: {color: '#FFF900'},
+            [entitiesIds.hive]: {color: '#714F54'}
         },
         layers = {
             top: 3,
@@ -120,6 +125,30 @@ var Map = function (numberOfPlayers) {
     };
     this.turnIterationAfterPlayers = function (turn) {
 
+    };
+    this.getDataForPlayer = function (playerId) {
+        var dataToReturn = {};
+        for (var entityId in entitiesPool) {
+            if (!entitiesPool.hasOwnProperty(entityId)) {
+                continue;
+            }
+            if (entitiesPool[entityId].ownerId !== playerId) {
+                continue;
+            }
+            if (entitiesPool[entityId].type === entitiesIds.hive) {
+                dataToReturn.hive = entitiesPool[entityId];
+                continue;
+            }
+            if (entitiesPool[entityId].type === entitiesIds.ant) {
+                dataToReturn.ants = dataToReturn.ants || [];
+                dataToReturn.ants.push(entitiesPool[entityId]);
+            }
+        }
+
+        return dataToReturn;
+    };
+    this.setDataFromPlayer = function (playerId, data) {
+        debugger;
     };
 
     var storeLocalData = function (key, data) {
@@ -171,14 +200,14 @@ var Map = function (numberOfPlayers) {
             }
         }
 
-        return entityData[ids.nothing].color;
+        return entityData[entitiesIds.nothing].color;
     };
 
     var grid = new Grid(mapHeight, mapWidth);
     var initEmptyMap = function () {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
-                setCell(ids.nothing, x, y);
+                setCell(entitiesIds.nothing, x, y);
             }
         }
     };
@@ -193,7 +222,7 @@ var Map = function (numberOfPlayers) {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
                 if (Math.random() < generationInput.probabilityOfWater) {
-                    setCell(ids.water, x, y);
+                    setCell(entitiesIds.water, x, y);
                 }
             }
         }
@@ -213,28 +242,28 @@ var Map = function (numberOfPlayers) {
                             ) {
                                 waterCount++;
                             } else {
-                                if (getCell(cellSurroundX, cellSurroundY) === ids.water) {
+                                if (getCell(cellSurroundX, cellSurroundY) === entitiesIds.water) {
                                     waterCount++;
                                 }
                             }
                         }
                     }
 
-                    if (getCell(x, y) === ids.water) {
+                    if (getCell(x, y) === entitiesIds.water) {
                         if (waterCount >= generationInput.fullCellCount
                             || waterCount <= 1 && iteration <= generationInput.fillEmptySpaceIterationLimit) {
-                            setCell(ids.water, x, y);
+                            setCell(entitiesIds.water, x, y);
                         } else {
-                            setCell(ids.nothing, x, y);
+                            setCell(entitiesIds.nothing, x, y);
                         }
                     } else {
-                        if (getCell(x, y) === ids.nothing) {
+                        if (getCell(x, y) === entitiesIds.nothing) {
                             if (waterCount >= generationInput.emptyCellCount
                                 || waterCount <= 1 && iteration <= generationInput.fillEmptySpaceIterationLimit
                             ) {
-                                setCell(ids.water, x, y);
+                                setCell(entitiesIds.water, x, y);
                             } else {
-                                setCell(ids.nothing, x, y);
+                                setCell(entitiesIds.nothing, x, y);
                             }
                         }
                     }
@@ -260,10 +289,10 @@ var Map = function (numberOfPlayers) {
             while (!cellEmpty) {
                 x = cachedHives[playerId]['x'] || Math.floor(Math.random() * mapWidth);
                 y = cachedHives[playerId]['y'] || Math.floor(Math.random() * mapHeight);
-                if (getCell(x, y) === ids.nothing) {
+                if (getCell(x, y) === entitiesIds.nothing) {
                     cellEmpty = true;
 
-                    setCell(ids.hive, x, y, layers.fringe);
+                    setCell(entitiesIds.hive, x, y, layers.fringe);
 
                     cachedHives[playerId]['x'] = x;
                     cachedHives[playerId]['y'] = y;
@@ -302,9 +331,9 @@ var Map = function (numberOfPlayers) {
         if (getCell(x, y, layers.object) !== null) {
             player.antsToSpawn++;
         } else {
-            var newAnt = new Ant();
+            var newAnt = new Ant({playerId: player.id, x: x, y: y});
             player.ants[newAnt.id] = newAnt;
-            setCell(ids.ant, x, y, layers.object);
+            setCell(entitiesIds.ant, x, y, layers.object);
         }
     };
 
