@@ -54,6 +54,7 @@ var Map = function (numberOfPlayers) {
         this.id = id;
         this.hive = null;
         this.ants = {};
+        this.antsToSpawn = 0;
     };
 
     this.numberOfPlayers = numberOfPlayers || 0;
@@ -73,16 +74,16 @@ var Map = function (numberOfPlayers) {
             [ids.hive]: {color: '#714F54'}
         },
         layers = {
-            base: 0,
-            fringe: 1,
+            top: 3,
             object: 2,
-            top: 3
+            fringe: 1,
+            base: 0
         },
         mapData = {
-            [layers.base]: [],
-            [layers.fringe]: [],
-            [layers.object]: [],
-            [layers.top]: []
+            [layers.base]: {},
+            [layers.fringe]: {},
+            [layers.object]: {},
+            [layers.top]: {}
         },
         generationInput = {
             probabilityOfWater: 0.27,
@@ -102,11 +103,6 @@ var Map = function (numberOfPlayers) {
         }
     };
 
-    /**
-     *
-     * @param player Player
-     * @param hive
-     */
     var addHiveToPlayer = function (player, hive) {
         player.hive = hive;
     };
@@ -114,12 +110,16 @@ var Map = function (numberOfPlayers) {
     this.renderMapFromData = function () {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
-                grid.drawCell(x, y, entityData[getCell(x, y)].color);
+                grid.drawCell(x, y, getCellColor(x, y));
             }
         }
     };
-    this.turnIteration = function () {
-        console.log('create food');
+    this.turnIterationBeforePlayers = function (turn) {
+        checkAndSpawnAntIfPossible(players);
+        console.log('create food turn ' + turn);
+    };
+    this.turnIterationAfterPlayers = function (turn) {
+
     };
 
     var storeLocalData = function (key, data) {
@@ -127,20 +127,6 @@ var Map = function (numberOfPlayers) {
     };
     var getLocalData = function (key) {
         return JSON.parse(localStorage.getItem('ants.map.' + key));
-    };
-
-    var getCell = function (x, y, layer) {
-        layer = layer || layers.base;
-        if (typeof mapData[layer] === 'undefined') {
-            throw new Error('Invalid layer: ' + layer);
-        }
-        if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
-            throw new Error('Invalid cell: ' + x + ':' + y);
-        }
-        if (typeof mapData[layer][y] === 'undefined') {
-            mapData[layer][y] = [];
-        }
-        return mapData[layer][y][x];
     };
     var setCell = function (entityId, x, y, layer) {
         layer = layer || layers.base;
@@ -152,12 +138,40 @@ var Map = function (numberOfPlayers) {
             throw new Error('Invalid entity type: ' + entityId);
         }
         if (typeof mapData[layer][y] === 'undefined') {
-            mapData[layer][y] = [];
+            mapData[layer][y] = {};
         }
         if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
             throw new Error('Invalid cell: ' + x + ':' + y);
         }
         mapData[layer][y][x] = entityId;
+    };
+    var getCell = function (x, y, layer) {
+        layer = layer || layers.base;
+        if (typeof mapData[layer] === 'undefined') {
+            throw new Error('Invalid layer: ' + layer);
+        }
+        if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
+            throw new Error('Invalid cell: ' + x + ':' + y);
+        }
+        if (typeof mapData[layer][y] === 'undefined') {
+            mapData[layer][y] = {};
+        }
+        return typeof mapData[layer][y][x] !== 'undefined' ? mapData[layer][y][x] : null;
+    };
+    var getCellColor = function (x, y) {
+        var cellEntityId;
+        for (var layerName in layers) {
+            if (!layers.hasOwnProperty(layerName)) {
+                continue;
+            }
+
+            cellEntityId = getCell(x, y, layers[layerName]);
+            if (typeof cellEntityId !== 'undefined' && cellEntityId !== null) {
+                return entityData[cellEntityId].color;
+            }
+        }
+
+        return entityData[ids.nothing].color;
     };
 
     var grid = new Grid(mapHeight, mapWidth);
@@ -240,6 +254,7 @@ var Map = function (numberOfPlayers) {
             if (!players.hasOwnProperty(playerId)) {
                 continue;
             }
+            playerId = parseInt(playerId, 10);
             cellEmpty = false;
             cachedHives[playerId] = cachedHives[playerId] || {};
             while (!cellEmpty) {
@@ -248,14 +263,13 @@ var Map = function (numberOfPlayers) {
                 if (getCell(x, y) === ids.nothing) {
                     cellEmpty = true;
 
-                    setCell(ids.hive, x, y);
+                    setCell(ids.hive, x, y, layers.fringe);
 
                     cachedHives[playerId]['x'] = x;
                     cachedHives[playerId]['y'] = y;
                 }
             }
 
-            debugger;
             addHiveToPlayer(players[playerId], new Hive({
                 playerId: playerId,
                 x: x,
@@ -264,13 +278,34 @@ var Map = function (numberOfPlayers) {
             spawnAnt(players[playerId]);
         }
 
-        console.log(players);
-
         storeLocalData('hives', cachedHives);
     };
 
+    var checkAndSpawnAntIfPossible = function (players) {
+        for (var playerId in players) {
+            if (!players.hasOwnProperty(playerId)) {
+                continue;
+            }
+            if (players[playerId].antsToSpawn === 0) {
+                continue;
+            }
+            var x = players[playerId].hive.x, y = players[playerId].hive.y;
+            if (getCell(x, y, layers.object) === null) {
+                players[playerId].antsToSpawn--;
+                spawnAnt(players[playerId]);
+            }
+        }
+    };
+
     var spawnAnt = function (player) {
-        debugger;
+        var x = player.hive.x, y = player.hive.y;
+        if (getCell(x, y, layers.object) !== null) {
+            player.antsToSpawn++;
+        } else {
+            var newAnt = new Ant();
+            player.ants[newAnt.id] = newAnt;
+            setCell(ids.ant, x, y, layers.object);
+        }
     };
 
     generatePlayers();
