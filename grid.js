@@ -1,5 +1,5 @@
 var Grid = function (height, width) {
-    var cellSize = 5;
+    var cellSize = 15;
     var bw = width * cellSize || 400;
     var bh = height * cellSize || 400;
 
@@ -35,4 +35,22 @@ var Grid = function (height, width) {
         context.fillStyle = color;
         context.fillRect(x * cellSize + cellSize + 1, y * cellSize + cellSize + 1, cellSize - 1, cellSize - 1);
     };
+
+    this.drawPath = function (x1, y1, x2, y2) {
+        x1=0;x2=0;y1=0;y2=5;
+        if (x1 >= this.gridWidth || x1 < 0 || y1 >= this.gridHeight || y1 < 0) {
+            throw new Error('Cell is out of boundaries');
+        }
+        if (x2 >= this.gridWidth || x2 < 0 || y2 >= this.gridHeight || y2 < 0) {
+            throw new Error('Cell is out of boundaries');
+        }
+
+        context.beginPath();
+
+        context.moveTo(cellSize * x1 + cellSize * 1.5, cellSize * y1 + cellSize * 1.5);
+        context.lineTo(cellSize * x2 + cellSize * 1.5, cellSize * y2 + cellSize * 1.5);
+
+        context.strokeStyle = "red";
+        context.stroke();
+    }
 };

@@ -6,7 +6,7 @@
  */
 var Engine = function (map, ais) {
     var numberOfPlayers = map.numberOfPlayers,
-        turnsLimit = 3,
+        turnsLimit = 1,
         isRunning = false;
 
     if (ais.length) {

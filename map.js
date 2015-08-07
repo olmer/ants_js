@@ -1,70 +1,7 @@
 var Map = function (numberOfPlayers) {
-
-    var idCounter = 1;
-    var entitiesPool = {};
-    var Entity = function (data) {
-        data = data || {};
-        this.id = idCounter++;
-        entitiesPool[this.id] = this;
-    };
-
-    var Hive = function (data) {
-        Entity.call(this, data);
-
-        data = data || {};
-
-        this.type = entitiesIds.hive;
-        this.x = data.x;
-        this.y = data.y;
-        this.ownerId = data.playerId;
-    };
-    Hive.prototype = Object.create(Entity.prototype);
-    Hive.prototype.constructor = Hive;
-
-    var Water = function (data) {
-        Entity.call(this, data);
-        this.type = entitiesIds.water;
-    };
-    Water.prototype = Object.create(Entity.prototype);
-    Water.prototype.constructor = Water;
-
-    var Ant = function (data) {
-        Entity.call(this, data);
-
-        data = data || {};
-
-        this.type = entitiesIds.ant;
-        this.x = data.x;
-        this.y = data.y;
-        this.ownerId = data.playerId;
-    };
-    Ant.prototype = Object.create(Entity.prototype);
-    Ant.prototype.constructor = Ant;
-
-    var Food = function (data) {
-        Entity.call(this, data);
-        this.type = entitiesIds.food;
-    };
-    Food.prototype = Object.create(Entity.prototype);
-    Food.prototype.constructor = Food;
-
-    var Nothing = function (data) {
-        Entity.call(this, data);
-        this.type = entitiesIds.nothing;
-    };
-    Nothing.prototype = Object.create(Entity.prototype);
-    Nothing.prototype.constructor = Nothing;
-
-    var Player = function (id) {
-        this.id = id;
-        this.hive = null;
-        this.ants = {};
-        this.antsToSpawn = 0;
-    };
-
-    this.numberOfPlayers = numberOfPlayers || 0;
-
-    var entitiesIds = {
+    var showPaths = true,
+        idCounter = 1,
+        entitiesIds = {
             nothing: 0,
             ant: 1,
             water: 2,
@@ -73,9 +10,9 @@ var Map = function (numberOfPlayers) {
         },
         entityData = {
             [entitiesIds.nothing]: {color: '#FFF'},
-            [entitiesIds.ant]: {color: '#00FF9A'},
+            [entitiesIds.ant]: {color: '#F00'},
             [entitiesIds.water]: {color: '#0AF'},
-            [entitiesIds.food]: {color: '#FFF900'},
+            [entitiesIds.food]: {color: '#000386'},
             [entitiesIds.hive]: {color: '#714F54'}
         },
         layers = {
@@ -97,10 +34,61 @@ var Map = function (numberOfPlayers) {
             smoothenIterations: 5,
             fillEmptySpaceIterationLimit: 2
         },
-        mapHeight = 100,
-        mapWidth = 200,
-        players = {}
-        ;
+        foodCount = 0,
+        foodLimit = 12,
+        mapHeight = 30,
+        mapWidth = 70,
+        grid = new Grid(mapHeight, mapWidth),
+        players = {},
+        entitiesPool = {};
+
+    var Entity = function (data) {
+        data = data || {};
+        this.id = idCounter++;
+        entitiesPool[this.id] = this;
+    };
+
+    var Hive = function (data) {
+        Entity.call(this, data);
+
+        data = data || {};
+
+        this.type = entitiesIds.hive;
+        this.x = data.x;
+        this.y = data.y;
+        this.ownerId = data.playerId;
+    };
+    Hive.prototype = Object.create(Entity.prototype);
+    Hive.prototype.constructor = Hive;
+
+    var Ant = function (data) {
+        Entity.call(this, data);
+
+        data = data || {};
+
+        this.type = entitiesIds.ant;
+        this.x = data.x;
+        this.y = data.y;
+        this.ownerId = data.playerId;
+    };
+    Ant.prototype = Object.create(Entity.prototype);
+    Ant.prototype.constructor = Ant;
+
+    var Player = function (id) {
+        this.id = id;
+        this.hive = null;
+        this.ants = {};
+        this.antsToSpawn = 0;
+    };
+
+    this.numberOfPlayers = numberOfPlayers || 0;
+
+    var getRandomCoordX = function () {
+        return Math.floor(Math.random() * mapWidth);
+    };
+    var getRandomCoordY = function () {
+        return Math.floor(Math.random() * mapHeight);
+    };
 
     var generatePlayers = function () {
         for (var id = 1; id <= numberOfPlayers; id++) {
@@ -122,6 +110,7 @@ var Map = function (numberOfPlayers) {
     this.turnIterationBeforePlayers = function (turn) {
         checkAndSpawnAntIfPossible(players);
         console.log('create food turn ' + turn);
+        generateFood();
     };
     this.turnIterationAfterPlayers = function (turn) {
 
@@ -148,7 +137,6 @@ var Map = function (numberOfPlayers) {
         return dataToReturn;
     };
     this.setDataFromPlayer = function (playerId, data) {
-        debugger;
     };
 
     var storeLocalData = function (key, data) {
@@ -202,8 +190,6 @@ var Map = function (numberOfPlayers) {
 
         return entityData[entitiesIds.nothing].color;
     };
-
-    var grid = new Grid(mapHeight, mapWidth);
     var initEmptyMap = function () {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
@@ -287,8 +273,8 @@ var Map = function (numberOfPlayers) {
             cellEmpty = false;
             cachedHives[playerId] = cachedHives[playerId] || {};
             while (!cellEmpty) {
-                x = cachedHives[playerId]['x'] || Math.floor(Math.random() * mapWidth);
-                y = cachedHives[playerId]['y'] || Math.floor(Math.random() * mapHeight);
+                x = cachedHives[playerId]['x'] || getRandomCoordX();
+                y = cachedHives[playerId]['y'] || getRandomCoordY();
                 if (getCell(x, y) === entitiesIds.nothing) {
                     cellEmpty = true;
 
@@ -296,6 +282,9 @@ var Map = function (numberOfPlayers) {
 
                     cachedHives[playerId]['x'] = x;
                     cachedHives[playerId]['y'] = y;
+                } else {
+                    cachedHives[playerId]['x'] = null;
+                    cachedHives[playerId]['y'] = null;
                 }
             }
 
@@ -334,6 +323,23 @@ var Map = function (numberOfPlayers) {
             var newAnt = new Ant({playerId: player.id, x: x, y: y});
             player.ants[newAnt.id] = newAnt;
             setCell(entitiesIds.ant, x, y, layers.object);
+        }
+    };
+
+    var generateFood = function () {
+        debugger;
+        var cellEmpty, x, y, food;
+        while (foodCount < foodLimit) {
+            cellEmpty = false;
+            while (!cellEmpty) {
+                x = getRandomCoordX();
+                y = getRandomCoordY();
+                if (getCell(x, y) === entitiesIds.nothing) {
+                    cellEmpty = true;
+                    setCell(entitiesIds.food, x, y, layers.base);
+                    foodCount++;
+                }
+            }
         }
     };
 
