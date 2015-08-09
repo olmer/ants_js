@@ -139,10 +139,10 @@ var Map = function (numberOfPlayers) {
     this.setDataFromPlayer = function (playerId, data) {
     };
 
-    var storeLocalData = function (key, data) {
+    var setCache = function (key, data) {
         localStorage.setItem('ants.map.' + key, JSON.stringify(data));
     };
-    var getLocalData = function (key) {
+    var getCache = function (key) {
         return JSON.parse(localStorage.getItem('ants.map.' + key));
     };
     var setCell = function (entityId, x, y, layer) {
@@ -200,8 +200,8 @@ var Map = function (numberOfPlayers) {
     var generateWater = function () {
         var cellSurroundX, cellSurroundY;
 
-        if (getLocalData('mapData')) {
-            mapData = getLocalData('mapData');
+        if (getCache('mapData')) {
+            mapData = getCache('mapData');
             return;
         }
 
@@ -257,12 +257,12 @@ var Map = function (numberOfPlayers) {
             }
         }
 
-        storeLocalData('mapData', mapData);
+        setCache('mapData', mapData);
     };
 
     var spawnHives = function (players) {
         var x, y, cellEmpty;
-        var cachedHives = getLocalData('hives');
+        var cachedHives = getCache('hives');
         cachedHives = cachedHives || [];
 
         for (var playerId in players) {
@@ -296,7 +296,7 @@ var Map = function (numberOfPlayers) {
             spawnAnt(players[playerId]);
         }
 
-        storeLocalData('hives', cachedHives);
+        setCache('hives', cachedHives);
     };
 
     var checkAndSpawnAntIfPossible = function (players) {
