@@ -16,7 +16,7 @@ var Map = function (numberOfPlayers) {
             [entitiesIds.hive]: {color: '#714F54'}
         },
         layers = {
-            top: 3,
+            effects: 3,
             object: 2,
             fringe: 1,
             base: 0
@@ -25,7 +25,7 @@ var Map = function (numberOfPlayers) {
             [layers.base]: {},
             [layers.fringe]: {},
             [layers.object]: {},
-            [layers.top]: {}
+            [layers.effects]: {}
         },
         generationInput = {
             probabilityOfWater: 0.27,
@@ -38,6 +38,19 @@ var Map = function (numberOfPlayers) {
         foodLimit = 12,
         mapHeight = 30,
         mapWidth = 70,
+        sightRadius = 5,
+        sightMap = function () {
+            var result = [];
+            for (var i = 0; i < sightRadius * 2 + 1; i++) {
+                result[i] = [];
+                for (var j = 0; j < sightRadius * 2 + 1; j++) {
+                    result[i][j] = Math.sqrt(
+                            Math.pow((sightRadius - i), 2) + Math.pow((sightRadius - j), 2)
+                        ) <= sightRadius;
+                }
+            }
+            return result;
+        } (),
         grid = new Grid(mapHeight, mapWidth),
         players = {},
         entitiesPool = {};
@@ -116,7 +129,9 @@ var Map = function (numberOfPlayers) {
 
     };
     this.getDataForPlayer = function (playerId) {
-        var dataToReturn = {};
+        var dataToReturn = {
+            entitiesIds: entitiesIds
+        };
         for (var entityId in entitiesPool) {
             if (!entitiesPool.hasOwnProperty(entityId)) {
                 continue;
@@ -129,8 +144,9 @@ var Map = function (numberOfPlayers) {
                 continue;
             }
             if (entitiesPool[entityId].type === entitiesIds.ant) {
-                dataToReturn.ants = dataToReturn.ants || [];
-                dataToReturn.ants.push(entitiesPool[entityId]);
+                dataToReturn.ants = dataToReturn.ants || {};
+                entitiesPool[entityId].sight = getAntSight(entitiesPool[entityId]);
+                dataToReturn.ants[entityId] = entitiesPool[entityId];
             }
         }
 
@@ -139,11 +155,44 @@ var Map = function (numberOfPlayers) {
     this.setDataFromPlayer = function (playerId, data) {
     };
 
+    var isCellVisibleForAnt = function (x, y) {
+        return sightMap[y][x];
+    };
+    var getAntSight = function (ant) {
+        var result = {}, i, j,
+            x1, y1, x2, y2;
+        x1 = ant.x - sightRadius;
+        x2 = ant.x + sightRadius;
+        y1 = ant.y - sightRadius;
+        y2 = ant.y + sightRadius;
+        for (i = y1; i <= y2; i++) {
+            if (isCoordinateYLegit(i)) {
+                result[i] = {};
+            }
+            for (j = x1; j <= x2; j++) {
+                if (isCellVisibleForAnt(i - y1, j - x1) && areCoordinatesLegit(j, i)) {
+                    result[i][j] = getCellTopLayerEntityId(j, i);
+                }
+            }
+        }
+
+        return result;
+    };
+
     var setCache = function (key, data) {
         localStorage.setItem('ants.map.' + key, JSON.stringify(data));
     };
     var getCache = function (key) {
         return JSON.parse(localStorage.getItem('ants.map.' + key));
+    };
+    var isCoordinateXLegit = function (x) {
+        return x >= 0 && x < mapWidth;
+    };
+    var isCoordinateYLegit = function (y) {
+        return y >= 0 && y < mapHeight;
+    };
+    var areCoordinatesLegit = function (x, y) {
+        return isCoordinateXLegit(x) && isCoordinateYLegit(y);
     };
     var setCell = function (entityId, x, y, layer) {
         layer = layer || layers.base;
@@ -157,7 +206,7 @@ var Map = function (numberOfPlayers) {
         if (typeof mapData[layer][y] === 'undefined') {
             mapData[layer][y] = {};
         }
-        if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
+        if (!areCoordinatesLegit(x, y)) {
             throw new Error('Invalid cell: ' + x + ':' + y);
         }
         mapData[layer][y][x] = entityId;
@@ -167,7 +216,7 @@ var Map = function (numberOfPlayers) {
         if (typeof mapData[layer] === 'undefined') {
             throw new Error('Invalid layer: ' + layer);
         }
-        if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) {
+        if (!areCoordinatesLegit(x, y)) {
             throw new Error('Invalid cell: ' + x + ':' + y);
         }
         if (typeof mapData[layer][y] === 'undefined') {
@@ -175,7 +224,7 @@ var Map = function (numberOfPlayers) {
         }
         return typeof mapData[layer][y][x] !== 'undefined' ? mapData[layer][y][x] : null;
     };
-    var getCellColor = function (x, y) {
+    var getCellTopLayerEntityId = function (x, y) {
         var cellEntityId;
         for (var layerName in layers) {
             if (!layers.hasOwnProperty(layerName)) {
@@ -184,11 +233,14 @@ var Map = function (numberOfPlayers) {
 
             cellEntityId = getCell(x, y, layers[layerName]);
             if (typeof cellEntityId !== 'undefined' && cellEntityId !== null) {
-                return entityData[cellEntityId].color;
+                return cellEntityId;
             }
         }
 
-        return entityData[entitiesIds.nothing].color;
+        return entitiesIds.nothing;
+    };
+    var getCellColor = function (x, y) {
+        return entityData[getCellTopLayerEntityId(x, y)].color;
     };
     var initEmptyMap = function () {
         for (var y = 0; y < mapHeight; y++) {
@@ -221,11 +273,7 @@ var Map = function (numberOfPlayers) {
                     //count surrounding cells
                     for (cellSurroundY = y - 1; cellSurroundY < y + 2; cellSurroundY++) {
                         for (cellSurroundX = x - 1; cellSurroundX < x + 2; cellSurroundX++) {
-                            if (cellSurroundY < 0
-                                || cellSurroundY >= mapHeight
-                                || cellSurroundX < 0
-                                || cellSurroundX >= mapWidth
-                            ) {
+                            if (!areCoordinatesLegit(cellSurroundX, cellSurroundY)) {
                                 waterCount++;
                             } else {
                                 if (getCell(cellSurroundX, cellSurroundY) === entitiesIds.water) {
@@ -327,7 +375,6 @@ var Map = function (numberOfPlayers) {
     };
 
     var generateFood = function () {
-        debugger;
         var cellEmpty, x, y, food;
         while (foodCount < foodLimit) {
             cellEmpty = false;
