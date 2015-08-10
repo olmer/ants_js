@@ -38,7 +38,7 @@ var Map = function (numberOfPlayers) {
         foodLimit = 12,
         mapHeight = 30,
         mapWidth = 70,
-        sightRadius = 5,
+        sightRadius = 9,
         sightMap = function () {
             var result = [];
             for (var i = 0; i < sightRadius * 2 + 1; i++) {
@@ -375,19 +375,24 @@ var Map = function (numberOfPlayers) {
     };
 
     var generateFood = function () {
-        var cellEmpty, x, y, food;
+        var cellEmpty, x, y, cachedFood = getCache('food') || [], food = [];
         while (foodCount < foodLimit) {
+            cachedFood[foodCount] = cachedFood[foodCount] || [];
             cellEmpty = false;
             while (!cellEmpty) {
-                x = getRandomCoordX();
-                y = getRandomCoordY();
+                x = cachedFood[foodCount].x || getRandomCoordX();
+                y = cachedFood[foodCount].y || getRandomCoordY();
                 if (getCell(x, y) === entitiesIds.nothing) {
                     cellEmpty = true;
                     setCell(entitiesIds.food, x, y, layers.base);
                     foodCount++;
+
+                    food.push({x: x, y: y});
                 }
             }
         }
+
+        setCache('food', food);
     };
 
     generatePlayers();

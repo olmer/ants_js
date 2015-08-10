@@ -21,12 +21,9 @@ var Engine = function (map, ais) {
                     map.turnIterationBeforePlayers(turn);
 
                     for (playerId = 1; playerId <= numberOfPlayers; playerId++) {
-                        map.setDataFromPlayer(
-                            playerId,
-                            ais[playerId - 1](
-                                map.getDataForPlayer(playerId)
-                            )
-                        );
+                        ais[playerId - 1].setInput(map.getDataForPlayer(playerId));
+                        ais[playerId - 1].processTurn();
+                        map.setDataFromPlayer(ais[playerId - 1].getOutput());
                     }
 
                     map.turnIterationAfterPlayers(turn);
