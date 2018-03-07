@@ -7,6 +7,7 @@
         function clearLocalAntsData() {
             localStorage.removeItem('ants.map.mapData');
             localStorage.removeItem('ants.map.hives');
+            localStorage.removeItem('ants.map.isGenerated');
         }
         function clearLocalAntsHives() {
             localStorage.removeItem('ants.map.hives');
@@ -17,6 +18,7 @@
 <canvas id="canvas" width="2000px" height="540px" style="background: #fff; margin:20px;"></canvas>
 <button onclick="clearLocalAntsData();window.location.reload()">Reset all</button>
 <button onclick="clearLocalAntsHives();window.location.reload()">Reset hives</button>
+<button onclick="map.emptyingStep();map.renderMapFromData();return false;">Step</button>
 <script type="text/javascript" src="grid.js"></script>
 <script type="text/javascript" src="map.js"></script>
 <script type="text/javascript" src="engine.js"></script>

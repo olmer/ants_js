@@ -100,6 +100,9 @@ var Map = function (numberOfPlayers) {
         player.hive = hive;
     };
 
+    this.emptyingStep = function () {
+        generateWater();
+    };
     this.renderMapFromData = function () {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
@@ -139,7 +142,7 @@ var Map = function (numberOfPlayers) {
     this.setDataFromPlayer = function (playerId, data) {
     };
 
-    var storeLocalData = function (key, data) {
+    var setLocalData = function (key, data) {
         localStorage.setItem('ants.map.' + key, JSON.stringify(data));
     };
     var getLocalData = function (key) {
@@ -198,20 +201,31 @@ var Map = function (numberOfPlayers) {
         }
     };
     var generateWater = function () {
-        var cellSurroundX, cellSurroundY;
+        if (getLocalData('mapData')) {
+            mapData = getLocalData('mapData');
+        }
 
-        // if (getLocalData('mapData')) {
-        //     mapData = getLocalData('mapData');
-        //     return;
-        // }
-
-        for (var y = 0; y < mapHeight; y++) {
+        if (!getLocalData('isGenerated')) {
+          for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
-                if (Math.random() < generationInput.probabilityOfWater) {
-                    setCell(entitiesIds.water, x, y);
-                }
+              setCell(entitiesIds.water, x, y);
+            }
+          }
+          setLocalData('isGenerated', true);
+        }
+
+        let emptied = false;
+        while (!emptied) {
+            let
+              x = Math.floor(Math.random() * 20),
+              y = Math.floor(Math.random() * 20);
+            if (getCell(x, y)) {
+                setCell(entitiesIds.nothing, x, y);
+                emptied = true;
             }
         }
+
+        setLocalData('mapData', mapData);
     };
 
     var spawnHives = function (players) {
@@ -250,7 +264,7 @@ var Map = function (numberOfPlayers) {
             spawnAnt(players[playerId]);
         }
 
-        storeLocalData('hives', cachedHives);
+        setLocalData('hives', cachedHives);
     };
 
     var checkAndSpawnAntIfPossible = function (players) {
