@@ -36,8 +36,8 @@ var Map = function (numberOfPlayers) {
         },
         foodCount = 0,
         foodLimit = 12,
-        mapHeight = 30,
-        mapWidth = 70,
+        mapHeight = 20,
+        mapWidth = 20,
         grid = new Grid(mapHeight, mapWidth),
         players = {},
         entitiesPool = {};
@@ -110,7 +110,7 @@ var Map = function (numberOfPlayers) {
     this.turnIterationBeforePlayers = function (turn) {
         checkAndSpawnAntIfPossible(players);
         console.log('create food turn ' + turn);
-        generateFood();
+        // generateFood();
     };
     this.turnIterationAfterPlayers = function (turn) {
 
@@ -200,10 +200,10 @@ var Map = function (numberOfPlayers) {
     var generateWater = function () {
         var cellSurroundX, cellSurroundY;
 
-        if (getLocalData('mapData')) {
-            mapData = getLocalData('mapData');
-            return;
-        }
+        // if (getLocalData('mapData')) {
+        //     mapData = getLocalData('mapData');
+        //     return;
+        // }
 
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
@@ -212,52 +212,6 @@ var Map = function (numberOfPlayers) {
                 }
             }
         }
-        //number of smoothen iteration
-        for (var iteration = 0; iteration < generationInput.smoothenIterations; iteration++) {
-            //iterate over every cell
-            for (y = 0; y < mapHeight; y++) {
-                for (x = 0; x < mapWidth; x++) {
-                    var waterCount = 0;
-                    //count surrounding cells
-                    for (cellSurroundY = y - 1; cellSurroundY < y + 2; cellSurroundY++) {
-                        for (cellSurroundX = x - 1; cellSurroundX < x + 2; cellSurroundX++) {
-                            if (cellSurroundY < 0
-                                || cellSurroundY >= mapHeight
-                                || cellSurroundX < 0
-                                || cellSurroundX >= mapWidth
-                            ) {
-                                waterCount++;
-                            } else {
-                                if (getCell(cellSurroundX, cellSurroundY) === entitiesIds.water) {
-                                    waterCount++;
-                                }
-                            }
-                        }
-                    }
-
-                    if (getCell(x, y) === entitiesIds.water) {
-                        if (waterCount >= generationInput.fullCellCount
-                            || waterCount <= 1 && iteration <= generationInput.fillEmptySpaceIterationLimit) {
-                            setCell(entitiesIds.water, x, y);
-                        } else {
-                            setCell(entitiesIds.nothing, x, y);
-                        }
-                    } else {
-                        if (getCell(x, y) === entitiesIds.nothing) {
-                            if (waterCount >= generationInput.emptyCellCount
-                                || waterCount <= 1 && iteration <= generationInput.fillEmptySpaceIterationLimit
-                            ) {
-                                setCell(entitiesIds.water, x, y);
-                            } else {
-                                setCell(entitiesIds.nothing, x, y);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        storeLocalData('mapData', mapData);
     };
 
     var spawnHives = function (players) {
@@ -346,7 +300,6 @@ var Map = function (numberOfPlayers) {
     generatePlayers();
     initEmptyMap();
     generateWater();
-    spawnHives(players);
 
     grid.drawBoard();
     this.renderMapFromData();
