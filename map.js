@@ -36,10 +36,14 @@ var Map = function (numberOfPlayers) {
         },
         foodCount = 0,
         foodLimit = 12,
-        mapHeight = 20,
-        mapWidth = 20,
+        mapN = 5,
+        mapHeight = mapN,
+        mapWidth = mapN,
+        nodes = {},
         grid = new Grid(mapHeight, mapWidth),
         players = {},
+        openSitesCount = 0,
+        stats = [],
         entitiesPool = {};
 
     var Entity = function (data) {
@@ -100,9 +104,105 @@ var Map = function (numberOfPlayers) {
         player.hive = hive;
     };
 
+    this.reset = function () {
+      openSitesCount = 0;
+    };
     this.emptyingStep = function () {
         generateWater();
+
+      let emptied = false;
+      while (!emptied) {
+        let
+          x = Math.floor(Math.random() * mapWidth),
+          y = Math.floor(Math.random() * mapHeight);
+        if (!isEmpty(x, y)) {
+          setCell(entitiesIds.nothing, x, y);
+          emptied = true;
+          openSitesCount++;
+
+          unionWithVirtual(x, y);
+          unionWithValidNeighbours(x, y);
+        }
+      }
+
+      setLocalData('mapData', mapData);
+      this.renderMapFromData();
+
+
+      if (percolates()) {
+        var stat = openSitesCount / (mapWidth * mapHeight);
+        stats.push(stat);
+        var sum = 0;
+        for( var i = 0; i < stats.length; i++ ){
+          sum += stats[i];
+        }
+
+        console.log('mean: ' + sum/stats.length);
+
+        localStorage.removeItem('ants.map.mapData');
+        localStorage.removeItem('ants.map.hives');
+        localStorage.removeItem('ants.map.isGenerated');
+
+        this.reset.bind(this)();
+
+        generatePlayers();
+        initEmptyMap();
+        generateWater();
+
+        grid.drawBoard();
+        this.renderMapFromData();
+        this.emptyingStep.bind(this)();
+      } else {
+        setTimeout(this.emptyingStep.bind(this), 1);
+      }
     };
+
+    var isEmpty = function (x, y) {
+      return !getCell(x, y);
+    };
+
+    var unionWithVirtual = function (x, y) {
+      if (y === 0) {
+        union(coordToIndex(x,y), mapHeight * mapWidth + 1);
+      }
+      if (y === mapHeight - 1) {
+        union(coordToIndex(x,y), mapHeight * mapWidth + 2);
+      }
+    };
+
+    var unionWithValidNeighbours = function (x, y) {
+      if (!invalidCoords(x-1,y) && isEmpty(x-1,y)) {
+        union(coordToIndex(x,y), coordToIndex(x-1,y));
+      }
+      if (!invalidCoords(x,y-1) && isEmpty(x,y-1)) {
+        union(coordToIndex(x,y), coordToIndex(x,y-1));
+      }
+      if (!invalidCoords(x+1,y) && isEmpty(x+1,y)) {
+        union(coordToIndex(x,y), coordToIndex(x+1,y));
+      }
+      if (!invalidCoords(x,y+1) && isEmpty(x,y+1)) {
+        union(coordToIndex(x,y), coordToIndex(x,y+1));
+      }
+    };
+
+      var invalidCoords = function (x, y) {
+        return x < 0 || x >= mapWidth || y < 0 || y >= mapHeight;
+      };
+      var union = function (i1, i2) {
+        if (nodes[findRoot(i1)] !== nodes[findRoot(i2)]) {
+          nodes[findRoot(i1)] = nodes[findRoot(i2)];
+        }
+      };
+      var findRoot = function (i) {
+        if (nodes[i] === nodes[nodes[i]]) {
+          return nodes[i];
+        }
+        return findRoot(nodes[nodes[i]]);
+      };
+      var percolates = function () {
+        return nodes[findRoot(mapHeight * mapWidth + 1)] === nodes[findRoot(mapHeight * mapWidth + 2)];
+      };
+
     this.renderMapFromData = function () {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
@@ -112,7 +212,7 @@ var Map = function (numberOfPlayers) {
     };
     this.turnIterationBeforePlayers = function (turn) {
         checkAndSpawnAntIfPossible(players);
-        console.log('create food turn ' + turn);
+        // console.log('create food turn ' + turn);
         // generateFood();
     };
     this.turnIterationAfterPlayers = function (turn) {
@@ -197,8 +297,14 @@ var Map = function (numberOfPlayers) {
         for (var y = 0; y < mapHeight; y++) {
             for (var x = 0; x < mapWidth; x++) {
                 setCell(entitiesIds.nothing, x, y);
+                nodes[coordToIndex(x, y)] = coordToIndex(x, y);
             }
         }
+      nodes[mapHeight * mapWidth + 1] = mapHeight * mapWidth + 1;
+      nodes[mapHeight * mapWidth + 2] = mapHeight * mapWidth + 2;
+    };
+    var coordToIndex = function (x, y) {
+        return y * mapHeight + x + 1;
     };
     var generateWater = function () {
         if (getLocalData('mapData')) {
@@ -213,19 +319,6 @@ var Map = function (numberOfPlayers) {
           }
           setLocalData('isGenerated', true);
         }
-
-        let emptied = false;
-        while (!emptied) {
-            let
-              x = Math.floor(Math.random() * 20),
-              y = Math.floor(Math.random() * 20);
-            if (getCell(x, y)) {
-                setCell(entitiesIds.nothing, x, y);
-                emptied = true;
-            }
-        }
-
-        setLocalData('mapData', mapData);
     };
 
     var spawnHives = function (players) {

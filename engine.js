@@ -31,7 +31,7 @@ var Engine = function (map, ais) {
 
                     map.turnIterationAfterPlayers(turn);
 
-                    console.log('before render turn ' + turn);
+                    // console.log('before render turn ' + turn);
                     map.renderMapFromData();
                     setTimeout(turnIteration, 1000);
                     turn++;
